@@ -32,7 +32,7 @@ esp_event_loop task    → internal to ESP-IDF; delivers callbacks, must stay un
 
 ## Per-Task Queues
 
-Each task-owning component (`BaseTask` subclasses) holds a **FreeRTOS queue** that is the single inbound channel for that component.  
+For task-backed components, a task-owned queue is the preferred inbound coordination mechanism.
 Cross-context work and directed commands should be enqueued and processed inside the owning task’s run loop.
 ```
 Component lifecycle
