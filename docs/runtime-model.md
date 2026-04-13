@@ -6,7 +6,7 @@ This document describes the intended execution model for the Raven runtime: how 
 
 ## Task Ownership
 
-Every **Service** and every **Activity** owns exactly one FreeRTOS task.  
+In the current foundational model, Activities are task-backed, and Services may own dedicated FreeRTOS tasks when independent asynchronous execution is justified.
 **Controllers** own no tasks — they are passive, thread-safe data stores accessed by other tasks.
 
 ```
