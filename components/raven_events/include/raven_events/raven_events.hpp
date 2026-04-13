@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esp_event.h"
+#include "raven_events/event_bus.hpp"
 
 // raven_events: event bus definitions.
 // Declare ESP-IDF event bases and event IDs for the Raven runtime here.
