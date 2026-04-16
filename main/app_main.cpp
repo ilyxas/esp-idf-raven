@@ -33,4 +33,16 @@ extern "C" void app_main(void)
 
     // Trigger the reference flow: send a MoveForward directed command.
     nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    nav_activity.post_message({ raven::nav_msg::KIND, raven::nav_msg::MOVE_FORWARD, nullptr });
+    
 }

@@ -1,0 +1,13 @@
+{
+    "idf.currentSetup": "/Users/ilya/.espressif/v6.0/esp-idf",
+    "idf.port": "/dev/tty.usbserial-1140",
+    "idf.customExtraVars": {
+        "IDF_TARGET": "esp32"
+    },
+    "idf.openOcdConfigs": [
+        "interface/ftdi/esp32_devkitj_v1.cfg",
+        "target/esp32.cfg"
+    ],
+    "idf.flashType": "UART",
+    "C_Cpp.errorSquiggles": "enabled"
+}
