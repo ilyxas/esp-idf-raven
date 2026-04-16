@@ -1,0 +1,168 @@
+{
+  "project": {
+    "name": "Raven",
+    "repository": "https://github.com/ilyxas/esp-idf-raven",
+    "summary": "ESP32 embedded firmware runtime providing a structured, event-driven execution model for autonomous vehicle/robotics applications. Built on top of ESP-IDF and FreeRTOS, it defines strict role boundaries between orchestration (Activities), hardware subsystem workers (Services), thread-safe shared state (Controllers), and an event-loop-backed broadcast bus (EventBus), all wired together at startup by a single root Coordinator.",
+    "core_principle": "Every piece of responsibility has exactly one owner. Activities decide what the system does (mode/FSM); Services do the actual subsystem work and own hardware interaction; Controllers are the sole source of truth for shared data; EventBus carries broadcast facts without coupling producers to consumers; directed commands travel via typed task-queue messages. Business logic never executes inside an event callback — callbacks are thin translators that forward to the owning task's queue."
+  },
+  "system_areas": [
+    {
+      "name": "Core Primitives",
+      "purpose": "Foundational base types shared across all runtime layers. Defines the message envelope and the reusable FreeRTOS task + queue wrapper that every Service and Activity builds on.",
+      "parts": [
+        {
+          "ref": "components/raven_core/include/raven_core/base_task.hpp",
+          "role": "BaseTask — C++ wrapper around a FreeRTOS task and its inbound queue. Provides start(), post_message(), and the handle_message() override point. All non-trivial work runs inside the owner task via this interface."
+        },
+        {
+          "ref": "components/raven_core/include/raven_core/task_message.hpp",
+          "role": "TaskMessage — minimal struct (kind, id, data*) that represents a directed command or self-message passed between components via their queues."
+        }
+      ]
+    },
+    {
+      "name": "Event Bus",
+      "purpose": "Decoupled broadcast layer for system-wide facts. Wraps the ESP-IDF default event loop so producers and consumers are never coupled. Handlers must stay thin — all logic executes in the receiving task.",
+      "parts": [
+        {
+          "ref": "components/raven_events/include/raven_events/event_bus.hpp",
+          "role": "EventBus — static API (init, post, subscribe, unsubscribe) over esp_event_loop. The only place in the runtime where broadcast facts are published and received."
+        },
+        {
+          "ref": "components/raven_events/include/raven_events/navigation_events.hpp",
+          "role": "Defines NAVIGATION_EVENTS base and NAV_EVENT_MOVE_FORWARD_DONE — the reference example of a typed broadcast event published by a Service and consumed by an Activity."
+        }
+      ]
+    },
+    {
+      "name": "Shared State (Controllers)",
+      "purpose": "Thread-safe canonical state stores. The single source of truth for all system-wide data. Services write; Activities and other Services read. No tasks, no business logic — pure data with atomic or mutex protection.",
+      "parts": [
+        {
+          "ref": "components/raven_state/include/raven_state/navigation_state.hpp",
+          "role": "NavigationState — reference controller holding atomic x/y/z position floats. Illustrates the controller pattern: written exclusively by NavigationService, readable by any layer."
+        },
+        {
+          "ref": "components/raven_state/include/raven_state/raven_state.hpp",
+          "role": "Aggregation header that exposes the full raven_state component surface."
+        }
+      ]
+    },
+    {
+      "name": "Services (Subsystem Workers)",
+      "purpose": "Asynchronous workers that encapsulate exactly one hardware subsystem or software stack. Each runs in its own FreeRTOS task, reads hardware / external input, writes results into shared state, and publishes broadcast events on noteworthy transitions. Receives directed commands via its queue.",
+      "parts": [
+        {
+          "ref": "components/raven_services/include/raven_services/base_service.hpp",
+          "role": "BaseService — thin specialization of BaseTask that marks a class as a subsystem worker. Concrete services inherit from this."
+        },
+        {
+          "ref": "components/raven_services/src/navigation_service.cpp",
+          "role": "NavigationService — reference service. On MOVE_FORWARD command: increments NavigationState.x, then publishes NAV_EVENT_MOVE_FORWARD_DONE. Demonstrates the write-state → publish-event pattern."
+        },
+        {
+          "ref": "components/raven_services/include/raven_services/navigation_messages.hpp",
+          "role": "nav_msg namespace — defines KIND (0x0010), MOVE_FORWARD, and MOVE_DONE message IDs used by both the service and the activity to identify directed messages."
+        }
+      ]
+    },
+    {
+      "name": "Activities (Orchestration / FSM)",
+      "purpose": "High-level behavioral layer. Each Activity owns a mode state machine and decides which services should be active and what they should do. Subscribes to events, receives directed messages, and posts commands to services — all processed in its own FreeRTOS task.",
+      "parts": [
+        {
+          "ref": "components/raven_activities/include/raven_activities/base_activity.hpp",
+          "role": "BaseActivity — thin specialization of BaseTask that marks a class as an orchestration / FSM component."
+        },
+        {
+          "ref": "components/raven_activities/src/navigation_activity.cpp",
+          "role": "NavigationActivity — reference activity with Idle/Working FSM. Demonstrates: subscribing to EventBus events via thin callback, delegating execution to NavigationService via directed message, and running all state transitions in its own task context."
+        }
+      ]
+    },
+    {
+      "name": "Bootstrap / Coordinator",
+      "purpose": "Root composition point. The only location where all objects are constructed, injected with their dependencies, and started. Contains no operational logic — it wires and launches.",
+      "parts": [
+        {
+          "ref": "main/app_main.cpp",
+          "role": "app_main — Coordinator entry point. Calls EventBus::init, constructs NavigationState, NavigationService (injected with state), NavigationActivity (injected with service), starts both tasks, then posts the initial directed commands to trigger the reference flow."
+        },
+        {
+          "ref": "main/Kconfig.projbuild",
+          "role": "ESP-IDF project configuration (Wi-Fi SSID/password). Placeholder for build-time hardware configuration."
+        }
+      ]
+    },
+    {
+      "name": "Platform Abstraction",
+      "purpose": "Thin isolation layer between the runtime and ESP-IDF / hardware driver APIs. Keeps the rest of the codebase portable and driver-independent.",
+      "parts": [
+        {
+          "ref": "components/raven_platform/include/raven_platform/raven_platform.hpp",
+          "role": "Stub header marking the raven_platform component boundary. Intended to hold hardware init helpers and ESP-IDF driver wrappers as the project grows."
+        }
+      ]
+    }
+  ],
+  "system_flows": [
+    {
+      "name": "Boot and initialization",
+      "chain": "app_main → EventBus::init (creates ESP-IDF event loop) → NavigationState constructed → NavigationService constructed (receives state ref) + started (spawns FreeRTOS task) → NavigationActivity constructed (receives service ref) + started (spawns FreeRTOS task, subscribes to NAVIGATION_EVENTS via EventBus)"
+    },
+    {
+      "name": "Directed command: MoveForward end-to-end",
+      "chain": "app_main posts TaskMessage{MOVE_FORWARD} to NavigationActivity queue → Activity dequeues in its task context → FSM check: Idle → Working → Activity posts TaskMessage{MOVE_FORWARD} to NavigationService queue → Service dequeues in its task context → increments NavigationState.x (atomic write) → publishes NAV_EVENT_MOVE_FORWARD_DONE via EventBus"
+    },
+    {
+      "name": "Event-driven FSM completion",
+      "chain": "EventBus delivers NAV_EVENT_MOVE_FORWARD_DONE → thin callback on_nav_event fires (runs on ESP-IDF event loop task) → callback posts TaskMessage{MOVE_DONE} to NavigationActivity queue and returns immediately → Activity dequeues MOVE_DONE in its own task context → FSM transitions Working → Idle"
+    },
+    {
+      "name": "Shared state read path",
+      "chain": "Any layer needing current position → reads NavigationState.x/y/z via atomic load (no mutex needed for scalar float reads) → observes latest value written by NavigationService"
+    }
+  ],
+  "reading_order_for_new_sessions": [
+    {
+      "step": 1,
+      "ref": "docs/architecture.md",
+      "reason": "Defines the five layers (Activities, Services, Controllers, Coordinator, EventBus), their responsibilities, invariants, and the canonical interaction diagram. Read this first to load the mental model."
+    },
+    {
+      "step": 2,
+      "ref": "components/raven_core/include/raven_core/base_task.hpp + task_message.hpp",
+      "reason": "BaseTask and TaskMessage are the mechanical backbone of every Service and Activity. Understanding the task/queue/message pattern makes every other component immediately readable."
+    },
+    {
+      "step": 3,
+      "ref": "components/raven_events/include/raven_events/event_bus.hpp",
+      "reason": "EventBus is the other half of the communication model (broadcast vs directed). Understand its thin API before reading any Service or Activity that publishes or subscribes."
+    },
+    {
+      "step": 4,
+      "ref": "components/raven_state/include/raven_state/navigation_state.hpp",
+      "reason": "NavigationState is the reference controller. It shows what a shared-state store looks like and why atomics (not mutexes) are used for simple scalars."
+    },
+    {
+      "step": 5,
+      "ref": "components/raven_services/src/navigation_service.cpp",
+      "reason": "NavigationService is the reference Service implementation. Shows the write-state → publish-event pattern in concrete code."
+    },
+    {
+      "step": 6,
+      "ref": "components/raven_activities/src/navigation_activity.cpp",
+      "reason": "NavigationActivity is the reference Activity. Shows FSM state management, thin EventBus callbacks, self-messaging, and directed command dispatch all in one place."
+    },
+    {
+      "step": 7,
+      "ref": "main/app_main.cpp",
+      "reason": "The Coordinator / bootstrap. Reading it last shows how all the pieces are wired and started — the system's composition root and the reference end-to-end flow trigger."
+    }
+  ],
+  "notes": {
+    "role_of_this_file": "project_map.json is a compact architectural orientation map intended to give a new agent or contributor a fast, high-signal mental model of the Raven runtime without requiring a full codebase read.",
+    "what_this_file_is_not": "This file is not an exact filesystem mirror, not a per-file inventory, not a changelog, not a task tracker, not a README rewrite, and not a full repository listing. It groups components by architectural meaning and includes only the most explanatory anchors for each system area.",
+    "current_state": "The repository contains a reference/scaffold implementation. NavigationService and NavigationActivity are working examples of each architectural pattern rather than production subsystems. raven_platform is a stub awaiting hardware driver abstractions."
+  }
+}
