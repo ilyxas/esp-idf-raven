@@ -1,13 +1,19 @@
 {
-    "idf.currentSetup": "/Users/ilya/.espressif/v6.0/esp-idf",
-    "idf.port": "/dev/tty.usbserial-1140",
-    "idf.customExtraVars": {
-        "IDF_TARGET": "esp32"
-    },
-    "idf.openOcdConfigs": [
-        "interface/ftdi/esp32_devkitj_v1.cfg",
-        "target/esp32.cfg"
-    ],
-    "idf.flashType": "UART",
-    "C_Cpp.errorSquiggles": "enabled"
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "idf.openOcdConfigs": [
+    "interface/ftdi/esp32_devkitj_v1.cfg",
+    "target/esp32.cfg"
+  ],
+  "idf.port": "/dev/tty.usbserial-1130",
+  "idf.currentSetup": "/Users/ilya/.espressif/v6.0/esp-idf",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32"
+  },
+  "clangd.path": "/Users/ilya/.espressif/tools/esp-clang/esp-20.1.1_20250829/esp-clang/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=/Users/ilya/Development/ESP/esp-idf-raven/build"
+  ],
+  "idf.flashType": "UART"
 }

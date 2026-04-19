@@ -41,6 +41,12 @@ void BaseTask::start()
 
 bool BaseTask::post_message(const TaskMessage& msg, TickType_t timeout)
 {
+    // TaskMessage copyMsg;
+    // copyMsg.id = msg.id;
+    // copyMsg.kind = msg.kind;
+    // copyMsg.payload_size = msg.payload_size;
+    // copyMsg.data = pvPortMalloc(msg.payload_size);
+    
     assert(queue_ != nullptr && "BaseTask::post_message() called before start()");
     return xQueueSend(queue_, &msg, timeout) == pdTRUE;
 }
@@ -59,6 +65,9 @@ void BaseTask::run()
     while (true) {
         if (xQueueReceive(queue_, &msg, portMAX_DELAY) == pdTRUE) {
             handle_message(msg);
+            // CRITICAL: Free the memory allocated by the sender!
+            vPortFree(msg.data);
+            msg.data = nullptr;
         }
     }
 }

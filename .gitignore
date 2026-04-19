@@ -17,3 +17,5 @@ sdkconfig.old
 
 # clang config (for LSP)
 .clangd
+.vscode/settings.json
+.vscode/c_cpp_properties.json

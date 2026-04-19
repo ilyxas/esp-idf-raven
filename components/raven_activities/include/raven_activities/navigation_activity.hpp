@@ -26,10 +26,12 @@ protected:
     void handle_message(const TaskMessage& msg) override;
 
 private:
-    enum class State { Idle, Working };
+    enum class State { Idle, Working, Manual };
 
     void handle_move_forward();
     void handle_move_done();
+    void handle_start_manual_nav();
+    void handle_halt_manual_nav();
 
     // Thin EventBus callback — translates the event into a self-message only.
     static void on_nav_event(void* ctx, esp_event_base_t base,

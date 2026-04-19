@@ -1,4 +1,5 @@
 #include "raven_services/navigation_service.hpp"
+#include "raven_core/task_message.hpp"
 #include "raven_services/navigation_messages.hpp"
 #include "raven_events/event_bus.hpp"
 #include "raven_events/navigation_events.hpp"
@@ -18,6 +19,12 @@ void NavigationService::handle_message(const TaskMessage& msg)
 {
     if (msg.kind == nav_msg::KIND && msg.id == nav_msg::MOVE_FORWARD) {
         handle_move_forward();
+    }
+
+    if (msg.id == net_msg::JOYSTICK_INPUT) {
+        const auto* js = static_cast<const JoystickPayload*>(msg.data);
+        ESP_LOGI(TAG, ":Joystick Input: position x=%f y=%f",
+             js->x, js->y);
     }
 }
 

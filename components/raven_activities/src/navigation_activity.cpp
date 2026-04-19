@@ -1,4 +1,5 @@
 #include "raven_activities/navigation_activity.hpp"
+#include "raven_core/task_message.hpp"
 #include "raven_services/navigation_messages.hpp"
 #include "raven_events/event_bus.hpp"
 #include "raven_events/navigation_events.hpp"
@@ -26,15 +27,41 @@ void NavigationActivity::on_start()
 
 void NavigationActivity::handle_message(const TaskMessage& msg)
 {
-    if (msg.kind != nav_msg::KIND) {
+    switch (msg.id) {
+        case nav_msg::MOVE_FORWARD:         handle_move_forward();      break;
+        case nav_msg::MOVE_DONE:            handle_move_done();         break;
+        case net_msg::START_MANUAL_NAV:     handle_start_manual_nav();  break;
+        case net_msg::HALT_MANUAL_NAV:      handle_halt_manual_nav();   break;
+        default:                                                        break;
+    }
+}
+
+void NavigationActivity::handle_start_manual_nav()
+{
+    if (state_ != State::Idle) {
+        ESP_LOGW(TAG, "handle_start_manual_nav ignored — not Idle");
         return;
     }
 
-    switch (msg.id) {
-        case nav_msg::MOVE_FORWARD: handle_move_forward(); break;
-        case nav_msg::MOVE_DONE:    handle_move_done();    break;
-        default:                                           break;
+    state_ = State::Manual;
+
+    // Delegate execution to NavigationService via a directed message.
+    //nav_service_.post_message({ nav_msg::KIND, nav_msg::MOVE_FORWARD, nullptr, 0 });
+    ESP_LOGI(TAG, "State — Idle → Manual Ready!");
+}
+
+void NavigationActivity::handle_halt_manual_nav()
+{
+    if (state_ != State::Manual) {
+        ESP_LOGW(TAG, "handle_halt_manual_nav ignored — not Manual");
+        return;
     }
+
+    state_ = State::Idle;
+
+    // Delegate execution to NavigationService via a directed message.
+    //nav_service_.post_message({ nav_msg::KIND, nav_msg::MOVE_FORWARD, nullptr, 0 });
+    ESP_LOGI(TAG, "State — Manual → Idle Ready!");
 }
 
 void NavigationActivity::handle_move_forward()
@@ -48,7 +75,7 @@ void NavigationActivity::handle_move_forward()
     state_ = State::Working;
 
     // Delegate execution to NavigationService via a directed message.
-    nav_service_.post_message({ nav_msg::KIND, nav_msg::MOVE_FORWARD, nullptr });
+    nav_service_.post_message({ nav_msg::KIND, nav_msg::MOVE_FORWARD, nullptr, 0 });
 }
 
 void NavigationActivity::handle_move_done()
@@ -66,7 +93,7 @@ void NavigationActivity::on_nav_event(void* ctx, esp_event_base_t /*base*/,
     // Thin callback: translate the completion event into a directed self-message
     // and return immediately. All business logic executes in handle_move_done().
     auto* self = static_cast<NavigationActivity*>(ctx);
-    self->post_message({ nav_msg::KIND, nav_msg::MOVE_DONE, nullptr });
+    self->post_message({ nav_msg::KIND, nav_msg::MOVE_DONE, nullptr, 0 });
 }
 
 } // namespace raven
