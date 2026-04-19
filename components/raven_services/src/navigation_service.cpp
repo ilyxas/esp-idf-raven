@@ -1,6 +1,7 @@
 #include "raven_services/navigation_service.hpp"
 #include "raven_core/task_message.hpp"
 #include "raven_services/navigation_messages.hpp"
+#include "raven_services/pilot_messages.hpp"
 #include "raven_events/event_bus.hpp"
 #include "raven_events/navigation_events.hpp"
 
