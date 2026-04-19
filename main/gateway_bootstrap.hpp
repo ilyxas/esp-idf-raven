@@ -8,6 +8,7 @@
 
 #include "raven_gateways/network_gateway.hpp"
 #include "raven_services/navigation_service.hpp"
+#include "raven_services/pilot_input_service.hpp"
 #include "raven_activities/navigation_activity.hpp"
 
 namespace raven {
@@ -17,6 +18,7 @@ namespace raven {
 // the gateway task.
 void configure_navigation_gateway(
     NetworkGateway&      gateway,
+    PilotInputService&   pilot_service,
     NavigationService&   nav_service,
     NavigationActivity&  nav_activity
 );

@@ -5,14 +5,21 @@
 #include "raven_events/event_bus.hpp"
 #include "raven_events/navigation_events.hpp"
 
+#include <inttypes.h>
 #include "esp_log.h"
 
 namespace raven {
 
 static const char* TAG = "NavigationActivity";
 
-NavigationActivity::NavigationActivity(NavigationService& nav_service)
-    : BaseActivity({ "nav_activity", 4096, 5, 8 }), nav_service_(nav_service)
+// Poll joystick state every 100 ms while in Manual mode.
+static constexpr TickType_t kManualTickInterval = pdMS_TO_TICKS(100);
+
+NavigationActivity::NavigationActivity(NavigationService& nav_service,
+                                       NavigationState&   nav_state)
+    : BaseActivity({ "nav_activity", 4096, 5, 8 })
+    , nav_service_(nav_service)
+    , nav_state_(nav_state)
 {
 }
 
@@ -37,6 +44,20 @@ void NavigationActivity::handle_message(const TaskMessage& msg)
     }
 }
 
+void NavigationActivity::on_tick()
+{
+    // Called at kManualTickInterval while in Manual mode.
+    // Read the latest joystick snapshot from NavigationState and act on it.
+    const NavigationState::JoystickData js = nav_state_.get_joystick();
+
+    ESP_LOGI(TAG, "Manual tick — joystick x=%.3f y=%.3f ts=%" PRIu32,
+             js.x, js.y, js.timestamp_ms);
+
+    // Demonstrate the intended architecture: activity polls state and could
+    // command NavigationService here when a non-trivial input is present.
+    // e.g. if (fabsf(js.x) > 0.1f || fabsf(js.y) > 0.1f) { ... }
+}
+
 void NavigationActivity::handle_start_manual_nav()
 {
     if (state_ != State::Idle) {
@@ -46,9 +67,11 @@ void NavigationActivity::handle_start_manual_nav()
 
     state_ = State::Manual;
 
-    // Delegate execution to NavigationService via a directed message.
-    //nav_service_.post_message({ nav_msg::KIND, nav_msg::MOVE_FORWARD, nullptr, 0 });
-    ESP_LOGI(TAG, "State — Idle → Manual Ready!");
+    // Enable periodic polling of NavigationState for joystick input.
+    set_tick_interval(kManualTickInterval);
+
+    ESP_LOGI(TAG, "State — Idle → Manual (polling every %" PRIu32 " ms)",
+             static_cast<uint32_t>(pdTICKS_TO_MS(kManualTickInterval)));
 }
 
 void NavigationActivity::handle_halt_manual_nav()
@@ -60,9 +83,10 @@ void NavigationActivity::handle_halt_manual_nav()
 
     state_ = State::Idle;
 
-    // Delegate execution to NavigationService via a directed message.
-    //nav_service_.post_message({ nav_msg::KIND, nav_msg::MOVE_FORWARD, nullptr, 0 });
-    ESP_LOGI(TAG, "State — Manual → Idle Ready!");
+    // Disable periodic polling.
+    set_tick_interval(0);
+
+    ESP_LOGI(TAG, "State — Manual → Idle");
 }
 
 void NavigationActivity::handle_move_forward()
