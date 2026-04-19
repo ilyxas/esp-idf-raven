@@ -16,13 +16,12 @@
 #include "raven_platform/TcpServer.hpp"
 
 #include "raven_gateways/network_gateway.hpp"
-#include "raven_gateways/decoder.hpp"
 #include "raven_events/event_bus.hpp"
 #include "raven_state/navigation_state.hpp"
 #include "raven_services/navigation_service.hpp"
-#include "raven_services/navigation_messages.hpp"
 #include "raven_activities/navigation_activity.hpp"
 #include "raven_core/SystemMonitorTask.hpp"
+#include "gateway_bootstrap.hpp"
 
 
 #include <cstdint>
@@ -301,15 +300,6 @@ static void consume_stream_chunk(std::string& rxBuffer, const char* data, size_t
 
 namespace raven {
 
-
-static FixedSizeDecoder joystick_decoder(msg_kind::PILOT_INPUT, sizeof(JoystickPayload));
-
-static FixedSizeDecoder start_manual_decoder(msg_kind::NAV_CMD, sizeof(StartManualPayload));
-
-static FixedSizeDecoder halt_manual_decoder(msg_kind::NAV_CMD, sizeof(HaltManualPayload));
-
-static VariableSizeDecoder llm_response_decoder(msg_kind::LLM_DATA, 1, 4096);
-
 extern "C" void app_main() {
 
     esp_err_t ret = nvs_flash_init();
@@ -357,18 +347,8 @@ extern "C" void app_main() {
         }
     );
 
-        // Например:
+    configure_navigation_gateway(gateway, nav_service, nav_activity);
 
-    gateway.register_decoder(net_msg::JOYSTICK_INPUT, &joystick_decoder);
-    gateway.register_decoder(net_msg::START_MANUAL_NAV, &start_manual_decoder);
-    gateway.register_decoder(net_msg::HALT_MANUAL_NAV, &halt_manual_decoder);
-    gateway.register_decoder(net_msg::LLM_RESPONSE_TEXT, &llm_response_decoder);
-
-    // Routes:
-    gateway.register_route(net_msg::JOYSTICK_INPUT, &nav_service);
-    gateway.register_route(net_msg::START_MANUAL_NAV, &nav_activity);
-    gateway.register_route(net_msg::HALT_MANUAL_NAV, &nav_activity);
-    // gateway.register_route(net_msg::LLM_RESPONSE_TEXT, &llm_ingress_service);
     gateway.start();
     monitor.start();
 }
