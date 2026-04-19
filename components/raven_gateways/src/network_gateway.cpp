@@ -116,26 +116,9 @@ bool NetworkGateway::dispatch_decoded(BaseTask& target, const DecodedMessageView
     msg.kind = decoded.kind;
     msg.id = decoded.id;
     msg.payload_size = decoded.payload_size;
-    msg.data = nullptr;
+    msg.data = const_cast<void*>(decoded.payload); // borrowed only for enqueue-time copy
 
-    if (decoded.payload_size > 0) {
-        void* owned = pvPortMalloc(decoded.payload_size);
-        if (owned == nullptr) {
-            return false;
-        }
-
-        std::memcpy(owned, decoded.payload, decoded.payload_size);
-        msg.data = owned;
-    }
-
-    const bool posted = target.post_message(msg);
-
-    if (!posted && msg.data != nullptr) {
-        vPortFree(msg.data);
-        msg.data = nullptr;
-    }
-
-    return posted;
+    return target.post_message(msg);
 }
 
 void NetworkGateway::run()

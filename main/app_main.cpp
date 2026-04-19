@@ -22,6 +22,7 @@
 #include "raven_services/navigation_service.hpp"
 #include "raven_services/navigation_messages.hpp"
 #include "raven_activities/navigation_activity.hpp"
+#include "raven_core/SystemMonitorTask.hpp"
 
 
 #include <cstdint>
@@ -323,6 +324,13 @@ extern "C" void app_main() {
         return;
     }
 
+    static SystemMonitorTask monitor({
+        .name = "system_monitor",
+        .stack_size = 4096,
+        .priority = 1,
+        .period_ticks = pdMS_TO_TICKS(10000)
+    });
+
     // Initialise the ESP-IDF default event loop — required by EventBus.
     raven::EventBus::init();
 
@@ -362,7 +370,7 @@ extern "C" void app_main() {
     gateway.register_route(net_msg::HALT_MANUAL_NAV, &nav_activity);
     // gateway.register_route(net_msg::LLM_RESPONSE_TEXT, &llm_ingress_service);
     gateway.start();
-
+    monitor.start();
 }
 
 }

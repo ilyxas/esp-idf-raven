@@ -1,6 +1,7 @@
 #include "raven_core/base_task.hpp"
 
 #include <cassert>
+#include <cstring>
 
 namespace raven {
 
@@ -41,14 +42,35 @@ void BaseTask::start()
 
 bool BaseTask::post_message(const TaskMessage& msg, TickType_t timeout)
 {
-    // TaskMessage copyMsg;
-    // copyMsg.id = msg.id;
-    // copyMsg.kind = msg.kind;
-    // copyMsg.payload_size = msg.payload_size;
-    // copyMsg.data = pvPortMalloc(msg.payload_size);
-    
     assert(queue_ != nullptr && "BaseTask::post_message() called before start()");
-    return xQueueSend(queue_, &msg, timeout) == pdTRUE;
+
+    TaskMessage copyMsg{};
+    copyMsg.id = msg.id;
+    copyMsg.kind = msg.kind;
+    copyMsg.payload_size = msg.payload_size;
+    copyMsg.data = nullptr;
+
+    if (msg.payload_size > 0) {
+        if (msg.data == nullptr) {
+            return false;
+        }
+
+        copyMsg.data = pvPortMalloc(msg.payload_size);
+        if (copyMsg.data == nullptr) {
+            return false;
+        }
+
+        std::memcpy(copyMsg.data, msg.data, msg.payload_size);
+    }
+
+    const bool sent = (xQueueSend(queue_, &copyMsg, timeout) == pdTRUE);
+
+    if (!sent && copyMsg.data != nullptr) {
+        vPortFree(copyMsg.data);
+        copyMsg.data = nullptr;
+    }
+
+    return sent;
 }
 
 // static
@@ -61,13 +83,15 @@ void BaseTask::run()
 {
     on_start();
 
-    TaskMessage msg;
+    TaskMessage msg{};
     while (true) {
         if (xQueueReceive(queue_, &msg, portMAX_DELAY) == pdTRUE) {
             handle_message(msg);
-            // CRITICAL: Free the memory allocated by the sender!
-            vPortFree(msg.data);
-            msg.data = nullptr;
+
+            if (msg.data != nullptr) {
+                vPortFree(msg.data);
+                msg.data = nullptr;
+            }
         }
     }
 }
