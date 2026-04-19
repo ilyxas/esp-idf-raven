@@ -55,16 +55,30 @@ protected:
     // All non-trivial processing must happen here, in the owning task context.
     virtual void handle_message(const TaskMessage& msg) = 0;
 
+    // Enable periodic ticking at the specified interval.
+    // Call from on_start() or handle_message() (i.e. within the task context).
+    // interval_ticks == 0 disables ticking (default — queue blocks indefinitely).
+    void set_tick_interval(TickType_t interval_ticks);
+
+    // Called at approximately the configured tick interval when the queue is idle.
+    // Default implementation does nothing.
+    // Override in derived classes to implement periodic polling behaviour.
+    virtual void on_tick() {}
+
 private:
     // Static trampoline: recovers the BaseTask instance and calls run().
     static void task_entry(void* arg);
 
-    // Internal receive loop. Blocks on the queue indefinitely.
+    // Internal receive loop. Blocks on the queue, with optional tick timeout.
     void run();
 
     Config        cfg_;
     TaskHandle_t  task_handle_;
     QueueHandle_t queue_;
+
+    // Periodic tick state — only accessed from within the task's run() loop.
+    TickType_t    tick_interval_ticks_{0};
+    TickType_t    last_tick_time_{0};
 };
 
 } // namespace raven

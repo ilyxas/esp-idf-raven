@@ -13,6 +13,7 @@ static VariableSizeDecoder s_llm_response_decoder(msg_kind::LLM_DATA, 1, 4096);
 
 void configure_navigation_gateway(
     NetworkGateway&      gateway,
+    PilotInputService&   pilot_service,
     NavigationService&   nav_service,
     NavigationActivity&  nav_activity
 )
@@ -24,10 +25,14 @@ void configure_navigation_gateway(
     gateway.register_decoder(net_msg::LLM_RESPONSE_TEXT, &s_llm_response_decoder);
 
     // Register routes: decoded msg_id → receiving task.
-    gateway.register_route(net_msg::JOYSTICK_INPUT,   &nav_service);
+    // JOYSTICK_INPUT goes to PilotInputService which writes NavigationState.
+    // NavigationActivity polls state during Manual mode via the tick mechanism.
+    gateway.register_route(net_msg::JOYSTICK_INPUT,   &pilot_service);
     gateway.register_route(net_msg::START_MANUAL_NAV, &nav_activity);
     gateway.register_route(net_msg::HALT_MANUAL_NAV,  &nav_activity);
     // gateway.register_route(net_msg::LLM_RESPONSE_TEXT, &llm_ingress_service);
+
+    (void)nav_service; // reserved for future internal-only navigation commands
 }
 
 } // namespace raven

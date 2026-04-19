@@ -2,6 +2,7 @@
 
 #include "raven_activities/base_activity.hpp"
 #include "raven_services/navigation_service.hpp"
+#include "raven_state/navigation_state.hpp"
 
 #include "esp_event.h"
 
@@ -9,14 +10,17 @@ namespace raven {
 
 // NavigationActivity — reference activity demonstrating the Raven communication model.
 //
-// Owns an Idle/Working internal state machine. On receiving a MoveForward
-// directed message it transitions to Working and delegates execution to
-// NavigationService. It subscribes to the service completion event; the
-// handler is intentionally thin and only posts a self-message. The
-// transition back to Idle runs in this activity's own task context.
+// Owns an Idle/Working/Manual internal state machine.
+//
+// In Manual mode the activity uses the BaseTask periodic tick capability to poll
+// NavigationState for the latest joystick snapshot.  Joystick ingress travels:
+//   gateway → PilotInputService → NavigationState
+// while this activity consumes it independently via on_tick(), demonstrating the
+// noisy-ingress / polling-consumer architecture.
 class NavigationActivity : public BaseActivity {
 public:
-    explicit NavigationActivity(NavigationService& nav_service);
+    explicit NavigationActivity(NavigationService& nav_service,
+                                NavigationState&   nav_state);
 
 protected:
     // Subscribes to NavigationService completion events.
@@ -24,6 +28,10 @@ protected:
 
     // Dispatches incoming directed messages and self-messages.
     void handle_message(const TaskMessage& msg) override;
+
+    // Called at the configured tick interval while in Manual mode.
+    // Reads the latest joystick snapshot from NavigationState and logs it.
+    void on_tick() override;
 
 private:
     enum class State { Idle, Working, Manual };
@@ -38,6 +46,7 @@ private:
                              int32_t id, void* event_data);
 
     NavigationService& nav_service_;
+    NavigationState&   nav_state_;
     State              state_{State::Idle};
 };
 

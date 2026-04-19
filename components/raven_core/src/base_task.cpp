@@ -73,6 +73,12 @@ bool BaseTask::post_message(const TaskMessage& msg, TickType_t timeout)
     return sent;
 }
 
+void BaseTask::set_tick_interval(TickType_t interval_ticks)
+{
+    tick_interval_ticks_ = interval_ticks;
+    last_tick_time_      = xTaskGetTickCount();
+}
+
 // static
 void BaseTask::task_entry(void* arg)
 {
@@ -85,12 +91,34 @@ void BaseTask::run()
 
     TaskMessage msg{};
     while (true) {
-        if (xQueueReceive(queue_, &msg, portMAX_DELAY) == pdTRUE) {
+        // Compute how long to wait: portMAX_DELAY when ticking is disabled,
+        // otherwise the remaining time until the next tick deadline.
+        // Note: unsigned subtraction correctly handles TickType_t wraparound —
+        // the elapsed time is always valid even after the tick counter overflows.
+        TickType_t wait_ticks = portMAX_DELAY;
+        if (tick_interval_ticks_ > 0) {
+            const TickType_t elapsed = xTaskGetTickCount() - last_tick_time_;
+            wait_ticks = (elapsed >= tick_interval_ticks_)
+                         ? 0
+                         : (tick_interval_ticks_ - elapsed);
+        }
+
+        if (xQueueReceive(queue_, &msg, wait_ticks) == pdTRUE) {
             handle_message(msg);
 
             if (msg.data != nullptr) {
                 vPortFree(msg.data);
                 msg.data = nullptr;
+            }
+        }
+
+        // Fire on_tick() if the interval has elapsed (covers both timeout and
+        // the case where handle_message() consumed all the wait time).
+        if (tick_interval_ticks_ > 0) {
+            const TickType_t elapsed = xTaskGetTickCount() - last_tick_time_;
+            if (elapsed >= tick_interval_ticks_) {
+                on_tick();
+                last_tick_time_ = xTaskGetTickCount();
             }
         }
     }

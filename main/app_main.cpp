@@ -19,6 +19,7 @@
 #include "raven_events/event_bus.hpp"
 #include "raven_state/navigation_state.hpp"
 #include "raven_services/navigation_service.hpp"
+#include "raven_services/pilot_input_service.hpp"
 #include "raven_activities/navigation_activity.hpp"
 #include "raven_core/SystemMonitorTask.hpp"
 #include "gateway_bootstrap.hpp"
@@ -331,8 +332,13 @@ extern "C" void app_main() {
     static raven::NavigationService nav_service(nav_state);
     nav_service.start();
 
+    // Service: receives joystick input from the gateway and writes NavigationState.
+    static raven::PilotInputService pilot_service(nav_state);
+    pilot_service.start();
+
     // Activity: owns behavior, reacts to directed messages.
-    static raven::NavigationActivity nav_activity(nav_service);
+    // Receives NavigationState reference to poll joystick data during Manual mode.
+    static raven::NavigationActivity nav_activity(nav_service, nav_state);
     nav_activity.start();
 
     static TcpServer server(8080);
@@ -347,7 +353,7 @@ extern "C" void app_main() {
         }
     );
 
-    configure_navigation_gateway(gateway, nav_service, nav_activity);
+    configure_navigation_gateway(gateway, pilot_service, nav_service, nav_activity);
 
     gateway.start();
     monitor.start();
