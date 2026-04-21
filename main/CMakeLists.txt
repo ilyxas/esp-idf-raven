@@ -3,5 +3,5 @@ idf_component_register(
          "gateway_bootstrap.cpp"
     PRIV_REQUIRES esp_wifi nvs_flash bt
     INCLUDE_DIRS "."
-    REQUIRES raven_core raven_events raven_state raven_activities raven_services raven_platform raven_gateways
+    REQUIRES raven_core raven_events raven_state raven_activities raven_services raven_platform raven_gateways esp_driver_gpio esp_adc
 )

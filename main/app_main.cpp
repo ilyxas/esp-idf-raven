@@ -23,9 +23,8 @@
 #include "raven_activities/navigation_activity.hpp"
 #include "raven_core/SystemMonitorTask.hpp"
 #include "gateway_bootstrap.hpp"
-
-
 #include <cstdint>
+
 
 
 namespace {
@@ -117,185 +116,6 @@ bool wifi_init_sta() {
 
 } // namespace
 
-// extern "C" void app_main(void) {
-//     esp_err_t ret = nvs_flash_init();
-//     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-//         ESP_ERROR_CHECK(nvs_flash_erase());
-//         ret = nvs_flash_init();
-//     }
-//     ESP_ERROR_CHECK(ret);
-
-//     if (!wifi_init_sta()) {
-//         ESP_LOGE(TAG, "wifi init failed");
-//         return;
-//     }
-
-//     TcpClientLink link(SERVER_IP, SERVER_PORT);
-
-//     if (!link.open()) {
-//         ESP_LOGE(TAG, "tcp connect failed");
-//         return;
-//     }
-
-//     ESP_LOGI(TAG, "tcp connected");
-
-//     const char* msg = "hello from esp32\n";
-//     const ssize_t written = link.write(msg, strlen(msg));
-//     ESP_LOGI(TAG, "sent bytes: %d", static_cast<int>(written));
-
-//     char buffer[128] = {};
-//     const ssize_t n = link.read(buffer, sizeof(buffer) - 1);
-//     if (n > 0) {
-//         buffer[n] = '\0';
-//         ESP_LOGI(TAG, "received: %s", buffer);
-//     } else {
-//         ESP_LOGI(TAG, "read returned: %d", static_cast<int>(n));
-//     }
-
-//     link.close();
-// }
-
-
-static void process_message_line(const std::string& line) {
-    if (line.empty()) {
-        return;
-    }
-
-    ESP_LOGI(TAG, "message: %s", line.c_str());
-
-    // Тут следующим шагом будет:
-    // 1. parse JSON
-    // 2. проверить msgId == "joystick.input"
-    // 3. достать x/y
-    // 4. пробросить во внутреннее сообщение Raven
-}
-
-
-static void consume_stream_chunk(std::string& rxBuffer, const char* data, size_t len) {
-    if (data == nullptr || len == 0) {
-        return;
-    }
-
-    rxBuffer.append(data, len);
-
-    size_t newlinePos = 0;
-    while ((newlinePos = rxBuffer.find('\n')) != std::string::npos) {
-        std::string line = rxBuffer.substr(0, newlinePos);
-
-        // убрать \r если вдруг прилетело \r\n
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back();
-        }
-
-        process_message_line(line);
-
-        rxBuffer.erase(0, newlinePos + 1);
-    }
-}
-
-// extern "C" void app_main() {
-//     // Wi-Fi init у тебя уже есть и работает
-//     // дождался IP, сеть поднята
-
-//     esp_err_t ret = nvs_flash_init();
-//     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-//         ESP_ERROR_CHECK(nvs_flash_erase());
-//         ret = nvs_flash_init();
-//     }
-//     ESP_ERROR_CHECK(ret);
-
-//     if (!wifi_init_sta()) {
-//         ESP_LOGE(TAG, "wifi init failed");
-//         return;
-//     }
-
-//     TcpServer server(8080);
-
-//     if (!server.start()) {
-//         ESP_LOGE("main", "server start failed");
-//         while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
-//     }
-
-//     ESP_LOGI("main", "server listening on 8080");
-
-//     while (true) {
-//         auto client = server.acceptConnection();
-//         if (!client) {
-//             ESP_LOGE("main", "accept failed");
-//             continue;
-//         }
-
-//         ESP_LOGI("main", "client connected");
-
-//         std::string rxBuffer;
-
-//         while (client->isOpen()) {  
-//             char buffer[256] = {};
-//             const ssize_t n = client->read(buffer, sizeof(buffer));
-
-//             if (n <= 0) {
-//                 ESP_LOGI("main", "client disconnected");
-//                 break;
-//             }
-
-//             consume_stream_chunk(rxBuffer, buffer, static_cast<size_t>(n));
-//         }
-
-//         client->close();
-//     }
-// }
-
-//extern "C" void app_main() {
-//     // Wi-Fi init у тебя уже есть и работает
-//     // дождался IP, сеть поднята
-
-//     esp_err_t ret = nvs_flash_init();
-//     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-//         ESP_ERROR_CHECK(nvs_flash_erase());
-//         ret = nvs_flash_init();
-//     }
-//     ESP_ERROR_CHECK(ret);
-
-//     if (!wifi_init_sta()) {
-//         ESP_LOGE(TAG, "wifi init failed");
-//         return;
-//     }
-
-//     TcpServer server(8080);
-
-//     if (!server.start()) {
-//         ESP_LOGE("main", "server start failed");
-//         while (true) { vTaskDelay(pdMS_TO_TICKS(1000)); }
-//     }
-
-//     ESP_LOGI("main", "server listening on 8080");
-
-//     while (true) {
-//         auto client = server.acceptConnection();
-//         if (!client) {
-//             ESP_LOGE("main", "accept failed");
-//             continue;
-//         }
-
-//         ESP_LOGI("main", "client connected");
-
-//         std::string rxBuffer;
-
-//         while (client->isOpen()) {  
-//             char buffer[256] = {};
-//             const ssize_t n = client->read(buffer, sizeof(buffer));
-
-//             if (n <= 0) {
-//                 ESP_LOGI("main", "client disconnected");
-//                 break;
-//             }
-
-//             consume_stream_chunk(rxBuffer, buffer, static_cast<size_t>(n));
-//         }
-
-//         client->close();
-//     }
-// }
 
 
 
@@ -358,5 +178,4 @@ extern "C" void app_main() {
     gateway.start();
     monitor.start();
 }
-
 }
