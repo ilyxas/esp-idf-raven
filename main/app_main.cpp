@@ -16,10 +16,13 @@
 #include "raven_platform/TcpServer.hpp"
 
 #include "raven_gateways/network_gateway.hpp"
+#include "raven_gateways/network_client_gateway.hpp"
 #include "raven_events/event_bus.hpp"
 #include "raven_state/navigation_state.hpp"
+#include "raven_state/telemetry_state.hpp"
 #include "raven_services/navigation_service.hpp"
 #include "raven_services/pilot_input_service.hpp"
+#include "raven_services/telemetry_service.hpp"
 #include "raven_activities/navigation_activity.hpp"
 #include "raven_core/SystemMonitorTask.hpp"
 #include "gateway_bootstrap.hpp"
@@ -148,6 +151,9 @@ extern "C" void app_main() {
     // Shared navigation state — single source of truth for position.
     static raven::NavigationState nav_state;
 
+    // Shared telemetry state — stores the latest telemetry snapshots.
+    static raven::TelemetryState telemetry_state;
+
     // Service: stub executor that updates state and signals completion.
     static raven::NavigationService nav_service(nav_state);
     nav_service.start();
@@ -173,9 +179,24 @@ extern "C" void app_main() {
         }
     );
 
-    configure_navigation_gateway(gateway, pilot_service, nav_service, nav_activity);
+    // Outbound gateway: sends telemetry snapshots to the remote server.
+    static NetworkClientGateway client_gateway(NetworkClientGateway::Config{
+        .name         = "net_client_gw",
+        .stack_size   = 4096,
+        .priority     = 5,
+        .queue_length = 8,
+        .host         = SERVER_IP,
+        .port         = SERVER_PORT,
+    });
+
+    // Service: collects and transmits telemetry every 100 ms.
+    static raven::TelemetryService telemetry_service(telemetry_state, client_gateway);
+    telemetry_service.start();
+
+    configure_navigation_gateway(gateway, client_gateway, pilot_service, nav_service, nav_activity, telemetry_service);
 
     gateway.start();
+    client_gateway.start();
     monitor.start();
 }
 }
