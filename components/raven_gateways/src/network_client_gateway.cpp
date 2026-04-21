@@ -27,8 +27,8 @@ void NetworkClientGateway::handle_message(const TaskMessage& msg)
         return;
     }
 
-    EncodedView view {};
-    if (!encoder->encode(msg, view)) {
+    EncodedFrame frame {};
+    if (!encoder->encode(msg, frame)) {
         ESP_LOGW(TAG, "Encoder failed for kind=%u id=%u — dropping message", msg.kind, msg.id);
         return;
     }
@@ -38,7 +38,8 @@ void NetworkClientGateway::handle_message(const TaskMessage& msg)
         return;
     }
 
-    if (!write_frame(msg.id, view.payload, view.payload_size)) {
+    const ssize_t written = link_.write(frame.data, frame.size);
+    if (written != static_cast<ssize_t>(frame.size)) {
         ESP_LOGW(TAG, "Write failed — closing link");
         link_.close();
     }
@@ -55,27 +56,6 @@ bool NetworkClientGateway::ensure_connected()
         ESP_LOGW(TAG, "Failed to open TCP link");
     }
     return ok;
-}
-
-bool NetworkClientGateway::write_frame(uint16_t msg_id, const void* payload, size_t payload_size)
-{
-    NetworkHeader header {};
-    header.msg_id       = msg_id;
-    header.payload_size = static_cast<uint32_t>(payload_size);
-
-    const ssize_t hw = link_.write(&header, sizeof(header));
-    if (hw != static_cast<ssize_t>(sizeof(header))) {
-        return false;
-    }
-
-    if (payload_size > 0 && payload != nullptr) {
-        const ssize_t pw = link_.write(payload, payload_size);
-        if (pw != static_cast<ssize_t>(payload_size)) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 } // namespace raven

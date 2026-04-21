@@ -4,7 +4,6 @@
 #include "raven_core/task_message.hpp"
 
 #include "raven_gateways/encoder_registry.hpp"
-#include "raven_gateways/network_header.hpp"
 #include "raven_platform/TcpClientLink.hpp"
 
 #include <cstddef>
@@ -60,10 +59,6 @@ private:
     // Ensure the TCP link is open; attempts to connect if not already connected.
     // Returns true if the link is ready for writing.
     bool ensure_connected();
-
-    // Write a complete network frame (NetworkHeader + payload) to the link.
-    // Returns false if the write fails; caller should close the link.
-    bool write_frame(uint16_t msg_id, const void* payload, size_t payload_size);
 
     TcpClientLink   link_;
     EncoderRegistry encoders_;
