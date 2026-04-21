@@ -4,6 +4,8 @@
 #include "raven_services/navigation_messages.hpp"
 #include "raven_services/navigation_service.hpp"
 #include "raven_services/pilot_input_service.hpp"
+#include "raven_services/telemetry_messages.hpp"
+#include "raven_services/telemetry_service.hpp"
 
 // raven_services: asynchronous subsystem workers.
 // Services encapsulate interaction with a single hardware subsystem or
