@@ -34,6 +34,7 @@ public:
         cJSON_AddNumberToObject(root, "sent_ts", s->sent_ts);
 
         cJSON* nav = cJSON_AddObjectToObject(root, "navigation");
+        if (!nav) { cJSON_Delete(root); return false; }
         cJSON_AddNumberToObject(nav, "speed",      s->navigation.speed);
         cJSON_AddNumberToObject(nav, "direction",  s->navigation.direction);
         cJSON_AddNumberToObject(nav, "position_x", s->navigation.position_x);
@@ -41,12 +42,14 @@ public:
         cJSON_AddNumberToObject(nav, "ts",         s->navigation.ts);
 
         cJSON* sys = cJSON_AddObjectToObject(root, "system");
+        if (!sys) { cJSON_Delete(root); return false; }
         cJSON_AddNumberToObject(sys, "rssi",        s->system.rssi);
         cJSON_AddNumberToObject(sys, "heap_free",   s->system.heap_free);
         cJSON_AddNumberToObject(sys, "battery_pct", s->system.battery_pct);
         cJSON_AddNumberToObject(sys, "ts",          s->system.ts);
 
         cJSON* sensors = cJSON_AddObjectToObject(root, "sensors");
+        if (!sensors) { cJSON_Delete(root); return false; }
         cJSON_AddNumberToObject(sensors, "lidar_distance", s->sensors.lidar_distance);
         cJSON_AddNumberToObject(sensors, "humidity",       s->sensors.humidity);
         cJSON_AddNumberToObject(sensors, "temperature",    s->sensors.temperature);

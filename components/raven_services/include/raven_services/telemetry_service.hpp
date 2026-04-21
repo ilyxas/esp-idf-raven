@@ -40,7 +40,8 @@ private:
     NetworkClientGateway& gateway_;
     bool                  active_{true};
 
-    // Snapshot reused across ticks — must outlive the gateway message dispatch.
+    // Snapshot reused across ticks. msg.data points here; the gateway task
+    // must process each message before the next tick overwrites the snapshot.
     TelemetrySnapshot snapshot_{};
 
     static constexpr TickType_t kTickInterval = pdMS_TO_TICKS(100);
